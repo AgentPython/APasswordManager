@@ -1,11 +1,12 @@
 import os
 import sys
+import atexit
 
-import argparse
+import click
 
 from .lib.Config import Config
 from .modules.misc import logo, create_directory_if_missing, assess_integrity, erase_vault
-from .views import setup, change_key
+from .views import setup
 from .views.menu import unlock
 from .views.import_export import import_, export_
 from .views.migration import migrate
@@ -16,6 +17,8 @@ dir_ = os.path.expanduser('~') + '/.vault/'
 config_path_default = dir_ + '.config'
 vault_path_default = dir_ + '.secure.db'
 
+def cleanup():
+    os.popen('find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf')
 
 def get_vault_path(override=None):
     """
@@ -65,12 +68,12 @@ def config_update(clipboard_TTL=None, auto_lock_TTL=None, hide_secret_TTL=None):
         return global_scope['conf'].update('hideSecretTTL', hide_secret_TTL)
 
 
-def initialize(vault_location_override, config_location_override, erase=None, clipboard_TTL=None, auto_lock_TTL=None, hide_secret_TTL=None, rekey_vault=None, import_items=None, export=None, file_format='json'):
+def initialize(kault_location_override, config_location_override, erase=None, clipboard_TTL=None, auto_lock_TTL=None, hide_secret_TTL=None, rekey_vault=None, import_file=None, export_file=None, file_format='json'):
     # Some nice ascii art
     logo()
 
     # Set vault and config path
-    vault_path = get_vault_path(vault_location_override)
+    vault_path = get_vault_path(kault_location_override)
     config_path = get_config_path(config_location_override)
 
     # Set vault path at the global scope
@@ -109,16 +112,16 @@ def initialize(vault_location_override, config_location_override, erase=None, cl
         sys.exit()
 
     # Import items in the vault
-    if import_items:
+    if import_file:
         print()
         print("Please consider backing up your vault located at `%s` before proceeding." % (
             vault_path))
-        import_(format_=file_format, path=import_items)
+        import_(format_=file_format, path=import_file)
         sys.exit()
 
     # Export vault
-    if export:
-        export_(format_=file_format, path=export)
+    if export_file:
+        export_(format_=file_format, path=export_file)
         sys.exit()
 
     # Check if the vault exists
@@ -131,42 +134,34 @@ def initialize(vault_location_override, config_location_override, erase=None, cl
     # Unlock the vault
     unlock()
 
+@click.command()
+@click.option('-t', '--clipboard_TTL', type=int, help="Set clipboard TTL (in seconds, default: 15)", default=15)
+@click.option('-p', "--hide_secret_TTL", type=int, help="Set delay before hiding a printed password (in seconds, default: 15)", default=5)
+@click.option('-a', '--auto_lock_TTL', type=int, help="Set auto lock TTL (in seconds, default: 900)", default=900)
+@click.option('-k', '--kault_location', type=str, help="Set kault path")
+@click.option('-c', '--config_location', type=str, help="Set config path")
+@click.option('-ck', '--change_key', is_flag=True, help="Change master key")
+@click.option('-i', '--import_file', type=str, help="File to import credentials from")
+@click.option('-x', '--export_file', type=str, help="File to export credentials to")
+@click.option('-f', '--file_format', type=click.Choice(['json']), help="Import / export file format (default: 'json')", default='json')
+@click.option('-e', '--erase_kault', is_flag=True, help="Erase the kault and config file")
+@click.version_option(version='0.0.1', prog_name="Kault")
+def run(clipboard_ttl, hide_secret_ttl, auto_lock_ttl, kault_location, config_location, change_key, import_file, export_file, file_format, erase_kault):
+
+    initialize(kault_location_override=kault_location,
+               config_location_override=config_location,
+               erase=erase_kault,
+               clipboard_TTL=clipboard_ttl,
+               auto_lock_TTL=auto_lock_ttl,
+               hide_secret_TTL=hide_secret_ttl,
+               rekey_vault=change_key,
+               import_file=import_file,
+               export_file=export_file,
+               file_format=file_format)
 
 def main():
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--clipboard_TTL", type=int,
-                        help="Set clipboard TTL (in seconds, default: 15)", nargs='?', const=15)
-    parser.add_argument("-p", "--hide_secret_TTL", type=int,
-                        help="Set delay before hiding a printed password (in seconds, default: 15)", nargs='?', const=5)
-    parser.add_argument("-a", "--auto_lock_TTL", type=int,
-                        help="Set auto lock TTL (in seconds, default: 900)", nargs='?', const=900)
-    parser.add_argument("-v", "--vault_location",
-                        type=str, help="Set vault path")
-    parser.add_argument("-c", "--config_location",
-                        type=str, help="Set config path")
-    parser.add_argument("-k", "--change_key",
-                        action='store_true', help="Change master key")
-    parser.add_argument("-i", "--import_items", type=str,
-                        help="File to import credentials from")
-    parser.add_argument("-x", "--export", type=str,
-                        help="File to export credentials to")
-    parser.add_argument("-f", "--file_format", type=str, help="Import/export file format (default: 'json')",
-                        choices=['json'], nargs='?', default='json')
-    parser.add_argument("-e", "--erase_vault", action='store_true',
-                        help="Erase the vault and config file")
-    args = parser.parse_args()
-
-    initialize(vault_location_override=args.vault_location,
-               config_location_override=args.config_location,
-               erase=args.erase_vault,
-               clipboard_TTL=args.clipboard_TTL,
-               auto_lock_TTL=args.auto_lock_TTL,
-               hide_secret_TTL=args.hide_secret_TTL,
-               rekey_vault=args.change_key,
-               import_items=args.import_items,
-               export=args.export,
-               file_format=args.file_format)
+    atexit.register(cleanup)
+    run()
 
 
 if __name__ == '__main__':
