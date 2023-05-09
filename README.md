@@ -15,7 +15,7 @@ Kault is a simple Python password manager. It allows you to securely save secret
 
  ## Basic usage
 
- **Coming soon**
+ ##### Coming soon
 
  ## Installation and setup
 
