@@ -10,10 +10,10 @@ from ..lib.Encryption import Encryption
 
 def initialize(salt):
     """
-        Vault setup
+        Kault setup
     """
 
-    print('Welcome to Vault. Please choose a secure secret key.')
+    print('Welcome to Kault. Please choose a secure secret key.')
     print()
 
     while True:

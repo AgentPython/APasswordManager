@@ -31,7 +31,6 @@ def validation_key_validate(key):
     try:
         user = get_session().query(UserModel).filter(
             UserModel.key == 'key_validation').order_by(UserModel.id.desc()).first()
-        print(user)
     except exc.DatabaseError:  # In case of encrypted db, if the encryption key is invalid
         # Drop db sessions to force a re-connection with the new key
         drop_sessions()
