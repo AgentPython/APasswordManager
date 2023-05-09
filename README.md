@@ -129,9 +129,14 @@ Replace the folders with your appropriate folders. You should now find sqlite3.e
 Add `sqlcipher-build` folder to system environment variables and restart your PC.
 
 ## Run
-
+Give permission to execute runner by using:
+```bash
+chmod +x runner.sh
 ```
-usage: poetry run app [-h] [-t [CLIPBOARD_TTL]] [-p [HIDE_SECRET_TTL]]
+
+### Usage
+```
+usage: ./runner.sh [-y] [-h] [-t [CLIPBOARD_TTL]] [-p [HIDE_SECRET_TTL]]
              [-a [AUTO_LOCK_TTL]] [-v VAULT_LOCATION] [-c CONFIG_LOCATION]
              [-k] [-i IMPORT_ITEMS] [-x EXPORT] [-f [{json}]] [-e]
 
