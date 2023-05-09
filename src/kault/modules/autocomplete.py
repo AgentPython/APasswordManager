@@ -1,13 +1,15 @@
-import re
 import readline
 
-# Usage:
-#
-# set_parameters(list_=['suggestion', 'suggestion2', 'other_suggestion'])
-# result = get_input_autocomplete()
-# print('Response -> ** % s**' % result)
+from rich.prompt import Prompt
 
-completion_list = ['one', 'two', 'thee']
+"""
+Usage:
+    set_parameters(list_=['suggestion', 'suggestion_2', 'other_suggestion'])
+    result = get_input_autocomplete()
+    print('Response -> ** % s**' % result)
+"""
+
+completion_list = ['one', 'two', 'three']
 is_case_sensitive = True
 
 
@@ -54,21 +56,23 @@ def find_breaking_strings(string):
     return result
 
 
-def get_input_autocomplete(message=''):
+def get_input_autocomplete(message='', choices=None):
     """ Allow user to type input and provide auto-completion """
 
     # Apple does not ship GNU readline with OS X.
     # It does ship BSD libedit which includes a readline compatibility interface.
     # Source: https://stackoverflow.com/questions/7116038/python-tab-completion-mac-osx-10-7-lion
-    if 'libedit' in readline.__doc__:
-        readline.parse_and_bind("bind ^I rl_complete")
-    else:
-        readline.parse_and_bind("tab: complete")
-    readline.set_completer(autocomplete)
+    if readline.__doc__ is not None:
 
-    try:
-        return input(message).strip()
-    except KeyboardInterrupt:
-        return False
-    except Exception:  # Other Exception
-        return False
+        if 'libedit' in readline.__doc__:
+            readline.parse_and_bind("bind ^I rl_complete")
+        else:
+            readline.parse_and_bind("tab: complete")
+        readline.set_completer(autocomplete)
+
+        try:
+            return Prompt.ask(message, choices=choices).strip()
+        except KeyboardInterrupt:
+            return False
+        except Exception:  # Other Exception
+            return False

@@ -1,7 +1,5 @@
 # Import/export view
 
-import sys
-
 from sqlalchemy.orm import Session
 
 from . import menu, secrets
@@ -9,10 +7,7 @@ from .setup import get_key_input
 from ..modules.carry import global_scope
 from ..lib.Encryption import Encryption
 from .users import validation_key_rekey
-from ..models.base import Base, get_session, get_engine
-from ..models.Category import CategoryModel  # Imported for schema creation
-from ..models.Secret import SecretModel  # Imported for schema creation
-from ..models.User import UserModel  # Imported for schema creation
+from ..models.base import get_session
 
 enc_current = enc_new = None
 
@@ -113,27 +108,6 @@ def rekey_db():
     print('Change the db encryption key: not implemented!')
 
     return None
-
-
-# def new_db_get_engine():
-#     """
-#         Will return a SQLite engine with the new key and a temporary location
-#     """
-
-#     # Save db file
-#     db_file = global_scope['db_file']
-
-#     # Update global scope
-#     global_scope['enc'] = enc_new
-#     global_scope['db_file'] = db_file + '.new'
-
-#     # Create engine
-#     engine = get_engine()
-
-#     # Restore db file
-#     global_scope['db_file'] = db_file
-
-#     return engine
 
 
 def unlock():

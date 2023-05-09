@@ -13,12 +13,14 @@ from .views.migration import migrate
 from .modules.carry import global_scope
 
 # Default paths
-dir_ = os.path.expanduser('~') + '/.vault/'
+dir_ = os.path.expanduser('~') + '/.kault/'
 config_path_default = dir_ + '.config'
 vault_path_default = dir_ + '.secure.db'
+extra_path_default = dir_ + '.extra.db'
 
 def cleanup():
     os.popen('find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf')
+
 
 def get_vault_path(override=None):
     """
@@ -121,6 +123,17 @@ def initialize(kault_location_override, config_location_override, erase=None, cl
 
     # Export vault
     if export_file:
+        if export_file == 'default':
+            export_file = '~/.kault/export'
+
+        if export_file.startswith('~'):
+            export_file = os.path.expanduser(export_file)
+        else:
+            export_file = os.path.abspath(export_file)
+
+        if file_format == 'db':
+            global_scope['extra_db_file'] = f"{export_file}.kault"
+ 
         export_(format_=file_format, path=export_file)
         sys.exit()
 
@@ -143,7 +156,7 @@ def initialize(kault_location_override, config_location_override, erase=None, cl
 @click.option('-ck', '--change_key', is_flag=True, help="Change master key")
 @click.option('-i', '--import_file', type=str, help="File to import credentials from")
 @click.option('-x', '--export_file', type=str, help="File to export credentials to")
-@click.option('-f', '--file_format', type=click.Choice(['json']), help="Import / export file format (default: 'json')", default='json')
+@click.option('-f', '--file_format', type=click.Choice(['json', 'yaml', 'db']), help="Import / export file format (default: 'json')", default='json')
 @click.option('-e', '--erase_kault', is_flag=True, help="Erase the kault and config file")
 @click.version_option(version='0.0.1', prog_name="Kault")
 def run(clipboard_ttl, hide_secret_ttl, auto_lock_ttl, kault_location, config_location, change_key, import_file, export_file, file_format, erase_kault):

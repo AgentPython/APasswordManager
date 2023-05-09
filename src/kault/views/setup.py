@@ -1,10 +1,7 @@
-import getpass
-import sys
-import uuid
-
+from ..extra.Data import DataModel
+from ..extra.base import get_extra_session, get_extra_engine, ExtraBase
 from ..models.base import Base, get_session, get_engine
-from ..models.Category import CategoryModel  # Imported for schema creation
-from ..models.Secret import SecretModel  # Imported for schema creation
+from ..models.Secret import SecretModel
 from ..modules.carry import global_scope
 from .users import validation_key_new
 from .menu import get_input
@@ -44,6 +41,16 @@ def initialize(salt):
             return True
 
 
+def create_extra_db():
+    """
+        Create extra db
+    """
+
+    session = get_extra_session()
+    ExtraBase.metadata.create_all(get_extra_engine())
+    session.commit()
+    return True
+
 def create_db():
     """
         Create db
@@ -52,8 +59,12 @@ def create_db():
     session = get_session()
     Base.metadata.create_all(get_engine())
     session.commit()
-
     return True
+
+
+def close_extra_db():
+    session = get_extra_session()
+    session.close()
 
 
 def get_key_input():
@@ -61,12 +72,12 @@ def get_key_input():
         Prompt user for a master key
     """
 
-    key = get_input(message='Please choose a master key:',
+    key = get_input(message='Please choose a master key',
                     secure=True, check_timer=False)
     if key is False:
         return False
     repeat = get_input(
-        message='Please confirm your master key:', secure=True, check_timer=False)
+        message='Please confirm your master key', secure=True, check_timer=False)
     if repeat is False:
         return False
 

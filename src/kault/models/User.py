@@ -11,5 +11,4 @@ class UserModel(Base):
     value = Column(String)
 
     def __repr__(self):
-        return "<UserModel(id='%s', key='%s', value='%s')>" % (
-            self.id, self.key, self.value)
+        return f"<UserModel(id='{self.id}', key='{self.key}', value='{self.value}')>"

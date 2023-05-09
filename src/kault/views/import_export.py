@@ -2,10 +2,12 @@
 
 import sys
 import json
+import yaml
+import os
 
 from tabulate import tabulate
 
-from . import menu, secrets, categories
+from . import menu, secrets, categories, setup, data
 from ..modules.misc import confirm
 from ..modules.carry import global_scope
 from ..lib.Encryption import Encryption
@@ -40,10 +42,75 @@ def export_(format_, path):
         Routing to format specific export methods
     """
 
+
     if format_ == 'json':
         return export_to_json(path)
+    elif format_ == 'yaml':
+        return export_to_yaml(path)
+    elif format_ == 'db':
+        return export_to_db()
     else:
         raise ValueError('%s is not a supported file format' % (format_))
+
+
+def export_to_db():
+    """
+        Export to a Database file
+    """
+
+    unlock()
+
+    out = []
+    for secret in secrets.all():
+        out.append({
+            'name': secret.name,
+            'url': secret.url,
+            'login': secret.login,
+            'password': secret.password,
+            'notes': secret.notes,
+            'category': categories.get_name(secret.category_id)
+        })
+
+    if os.path.isfile(global_scope['extra_db_file']):
+        os.remove(global_scope['extra_db_file'])
+
+    setup.create_extra_db()
+
+    for id, item in enumerate(out, start=1):
+        data.add(id=id,
+                 name=item['name'],
+                 url=item['url'],
+                 login=item['login'],
+                 password=item['password'],
+                 notes=item['notes'],
+                 category=item['category'])
+
+    setup.close_extra_db()
+
+    return False
+
+def export_to_yaml(path):
+    """
+        Export to a Json file
+    """
+
+    # Ask user to unlock the vault
+    unlock()
+
+    # Create dict of secrets
+    out = []
+    for secret in secrets.all():
+        out.append({
+            'name': secret.name,
+            'url': secret.url,
+            'login': secret.login,
+            'password': secret.password,
+            'notes': secret.notes,
+            'category': categories.get_name(secret.category_id),
+        })
+
+    res = yaml.dump(out, indent=2, sort_keys=False, width=80)
+    return save_file(f"{path}.yaml", res)
 
 
 def export_to_json(path):
@@ -66,7 +133,8 @@ def export_to_json(path):
             'category': categories.get_name(secret.category_id),
         })
 
-    return save_file(path, json.dumps(out))
+    res = json.dumps(out, indent=2)
+    return save_file(f"{path}.json", res)
 
 
 def import_from_json(path=None, rows=None):

@@ -1,17 +1,15 @@
-import os
-from hashlib import sha256
-
-
 import sqlcipher3
+
+from json import dump
+from os import path
+from hashlib import sha256
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import as_declarative
 from sqlalchemy.orm import Session
 
 from ..modules.carry import global_scope
 
-
 sessions = {}
-
 
 @as_declarative()
 class Base(object):
@@ -21,16 +19,14 @@ class Base(object):
 
     pass
 
-
 def get_session(fresh=False):
     """
         Return SQLAlchemy session
     """
 
     global sessions
-
     if global_scope['db_file'] is None:
-        raise RuntimeError('`db_file` is not defined in the global scope')
+        raise RuntimeError("`db_file` is not defined in the global scope")
 
     # Create a unique key for the db session
     db_file = global_scope['db_file']
@@ -53,22 +49,26 @@ def drop_sessions():
 
     return True
 
-
 def get_engine(encrypted=True):
     """
-        return SQLAlchemy engine
+        Return SQLAlchemy engine
     """
 
     if global_scope['db_file'] is None:
-        raise RuntimeError('`db_file` is not defined in the global scope')
+        raise RuntimeError("`db_file` is not defined in the global scope")
 
     if encrypted:
-        with open('test.txt', 'w') as file:
-            file.write(f"DB Key: {get_db_key()}\n")
-        print(get_db_key(),  get_slashes(), global_scope['db_file'])
-        return create_engine('sqlite+pysqlcipher://:' + get_db_key() + '@' + get_slashes() + global_scope['db_file'], module=sqlcipher3)
+        if path.isfile('master.json'):
+            data = {
+                "Key": get_db_key()
+            }
+            with open('master.json', 'w') as file:
+                dump(data, file, indent=2)
+                file.close()
+
+        return create_engine(f"sqlite+pysqlcipher://:{get_db_key()}@{get_slashes()}{global_scope['db_file']}", module=sqlcipher3)
     else:
-        return create_engine('sqlite:' + get_slashes() + global_scope['db_file'])
+        return create_engine(f"sqlite:{get_slashes()}{global_scope['db_file']}")
 
 
 def get_db_key():
@@ -77,28 +77,27 @@ def get_db_key():
     """
 
     if global_scope['enc'] is None:
-        raise RuntimeError('`enc` is not defined in the global scope')
+        raise RuntimeError("`enc` is not defined in the global scope")
 
     if global_scope['conf'] is None:
-        raise RuntimeError('`conf` is not defined in the global scope')
+        raise RuntimeError("`conf` is not defined in the global scope")
 
-    # Retrieve key
+    # Retrive key
     return sha256(global_scope['enc'].key + global_scope['conf'].salt.encode()).hexdigest()
-
 
 def get_slashes(encrypted=True):
     """
         Return the appropriate number of slash for the database connection
-        based on wether the db path is relative or absolute
+        based on whether the db path is relative or absolute
     """
 
     if encrypted:
-        if os.path.isabs(global_scope['db_file']):
+        if global_scope['db_file'] is not None and path.isabs(global_scope['db_file']):
             return '//'
 
         return '/'
     else:
-        if os.path.isabs(global_scope['db_file']):
+        if global_scope['db_file'] is not None and path.isabs(global_scope['db_file']):
             return '////'
 
         return '///'

@@ -6,15 +6,20 @@ import random
 from sqlalchemy import or_, func
 from tabulate import tabulate
 from passwordgenerator import pwgenerator
+from rich.table import Table
+from rich.console import Console
+from rich import box
+from collections import OrderedDict
 
 from ..models.base import get_session
 from ..models.Secret import SecretModel
-from ..modules.misc import confirm, clear_screen
+from ..modules.misc import confirm, clear_screen, logo_small
 from ..modules.carry import global_scope
 from ..modules import autocomplete
 from .categories import get_name as get_category_name, pick, all as all_categories
 from . import clipboard, menu
 
+console = Console()
 
 def all():
     """
@@ -120,25 +125,29 @@ def add_input():
         if category_id is False:
             return False
 
-    name = menu.get_input(message='* Name: ')
+    name = menu.get_input(message='* Name')
     if name is False:
         return False
 
-    url = menu.get_input(message='* URL: ')
+    url = menu.get_input(message='* URL')
     if url is False:
         return False
 
     # Get list for auto-completion
     autocomplete.set_parameters(list_=get_top_logins(), case_sensitive=True)
     login = autocomplete.get_input_autocomplete(
-        message='* Login (use [tab] for autocompletion): ')
+        message='* Login (use [tab] for autocompletion)')
+
+    if login is None:
+        login = ''
+
     if login is False:
         return False
 
     suggestion = pwgenerator.generate()
     print('* Password suggestion: %s' % (suggestion))
     password = menu.get_input(
-        message='* Password: ', secure=True)
+        message='* Password', secure=True)
     if password is False:
         return False
 
@@ -171,7 +180,7 @@ def notes_input():
     print('* Notes: (press [ENTER] twice to complete)')
     notes = []
     for i in range(15):  # Max 15 lines
-        input_ = menu.get_input(message="> ")
+        input_ = menu.get_notes_input(message="> ")
         if input_ is False:
             return False
         elif input_ == "":
@@ -246,6 +255,38 @@ def search_dispatch(query):
     # Otherwise return search result
     return search(query)
 
+def all_input():
+    logo_small()
+
+    table = Table()
+    table.add_column("Key")
+    table.add_column("Title")
+
+    menu_list = {
+        "s": "Search an item in the vault",
+        "v": "View all items in the vault",
+        "a": "Add an item to the vault",
+        "c": "See all categories in the vault",
+        "l": "Lock the vault",
+        "q": "Quit"
+    }
+
+    for key, title in menu_list.items():
+        table.add_row(key, title)
+
+    console.print(table)
+
+    query = menu.get_input(
+        message="Choose an option",
+        lowercase=True,
+        choices=list(menu_list.keys()),
+        non_locking_values=['l', 'q'])
+
+    if query != 'b':
+        return query
+
+    return False 
+     
 
 def search_input():
     """
@@ -256,7 +297,7 @@ def search_input():
     print()
     autocomplete.set_parameters(list_=get_names(), case_sensitive=False)
     query = autocomplete.get_input_autocomplete(
-        message='Enter search: ')
+        message='Enter search')
 
     if not query:
         print()
@@ -300,7 +341,7 @@ def search_results(rows):
 
     # Ask user input
     input_ = menu.get_input(
-        message='Select a result # or type any key to go back to the main menu: ')
+        message='Select a result # or type any key to go back to the main menu')
 
     if input_:
         try:
@@ -341,22 +382,47 @@ def item_menu(item):
     """
 
     while True:
+        menu_lists = {
+            "e": 'Edit',
+            "d": "Delete",
+            "s": "Search",
+            "b": "Back to Vault"
+        }
+
+        menu_list = OrderedDict(menu_lists)
+        if item.login or item.password or item.url:
+            if item.password:
+                menu_list.update({"v": "View password"})
+                menu_list.move_to_end("v", last=False)
+
+            if item.url:
+                menu_list.update({"c": "Copy URL"})
+                menu_list.move_to_end("c", last=False)
+
+            if item.password:
+                menu_list.update({"p": "Copy password"})
+                menu_list.move_to_end("p", last=False)
+
+            if item.login:
+                menu_list.update({"l": "Copy login"})
+                menu_list.move_to_end("l", last=False)
+
+        menu_list_dict = dict(menu_list)
+
+        table = Table(box=box.ROUNDED)
+        table.add_column("Key")
+        table.add_column("Description")
+
+        for key, description in menu_list_dict.items():
+            table.add_row(key, description)
+
+        console.print(table)
         command = menu.get_input(
-            message='Choose a command [%s%s%s%s%s%s / (e)dit / (d)elete / (s)earch / (b)ack to Vault]: ' % (
-                    'copy ' if item.login or item.password or item.url else '',
-                    '(l)ogin, ' if item.login else '',
-                    '(p)assword' if item.password else '',
-                    ' or ' if (
-                        item.login or item.password) and item.url else '',
-                    '(u)rl to clipboard' if item.url else '',
-                    ' / sh(o)w password' if item.password else '',
-            ),
+            message = "Choose a command",
+            choices=list(menu_list_dict.keys()),
             lowercase=True,
             non_locking_values=['l', 'q']
         )
-
-        if command is False:
-            print()
 
         # Action based on command
         if command == 'l':  # Copy login to the clipboard
@@ -384,8 +450,28 @@ def item_menu_edit(item):
         Edit an item
     """
 
+    menu_list = {
+        "c": "Category",
+        "n": "Name",
+        "u": "URL",
+        "l": "Login",
+        "p": "Password",
+        "n": "Notes",
+        "b": "Back to Vault"
+    }
+
+    table = Table(box=box.ROUNDED)
+    table.add_column("Key")
+    table.add_column("Type")
+
+    for key, value in menu_list.items():
+        table.add_row(key, value)
+
+    console.print(table)
+
     command = menu.get_input(
-        message='Choose what you would like to edit [(c)ategory / (n)ame  / (u)rl / (l)ogin / (p)assword / n(o)tes / (b)ack to Vault]: ',
+        message='Choose what you would like to edit',
+        choices=list(menu_list.keys()),
         lowercase=True,
         non_locking_values=['l', 'q']
     )
@@ -423,7 +509,7 @@ def edit_input(element_name, item):
     if element_name == 'category':
         print('* Current nategory: %s' %
               (get_category_name(item.category_id) or 'Empty!'))
-        category_id = pick(message='* New category: ', optional=True)
+        category_id = pick(message='* New category', optional=True)
 
         if category_id is not False:
             item.category_id = category_id
@@ -433,7 +519,7 @@ def edit_input(element_name, item):
             return False
     elif element_name == 'name':
         print('* Current name: %s' % (item.name or 'Empty!'))
-        name = menu.get_input(message='* New name: ')
+        name = menu.get_input(message='* New name')
 
         if name is not False:
             item.name = name
@@ -443,7 +529,7 @@ def edit_input(element_name, item):
             return False
     elif element_name == 'url':
         print('* Current URL: %s' % (item.url or 'Empty!'))
-        url = menu.get_input(message='* New URL: ')
+        url = menu.get_input(message='* New URL')
 
         if url is not False:
             item.url = url
@@ -453,7 +539,7 @@ def edit_input(element_name, item):
             return False
     elif element_name == 'login':
         print('* Current login: %s' % (item.login or 'Empty!'))
-        login = menu.get_input(message='* New login: ')
+        login = menu.get_input(message='* New login')
 
         if login is not False:
             item.login = login
@@ -463,7 +549,7 @@ def edit_input(element_name, item):
             return False
     elif element_name == 'password':
         print('* Password suggestion: %s' % (pwgenerator.generate()))
-        password = menu.get_input(message='* New password: ', secure=True)
+        password = menu.get_input(message='* New password', secure=True)
 
         if password is not False:
             item.password = password

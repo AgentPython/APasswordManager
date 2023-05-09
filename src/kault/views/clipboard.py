@@ -88,4 +88,4 @@ def erase():
 
     if not is_changed():  # We will not empty the clipboard if its content has changed
         copy(to_copy='', erase=True)  # Empty clipboard
-    clipboard_signature = ''  # Reset clipboard signature
+    clipboard_signature = ''

@@ -3,6 +3,9 @@
 import time
 
 from tabulate import tabulate
+from rich.console import Console
+from rich.table import Table
+from rich import box
 
 from ..models.base import get_session
 from ..models.Category import CategoryModel
@@ -10,6 +13,7 @@ from ..models.Secret import SecretModel
 from ..modules.misc import confirm, clear_screen
 from . import menu
 
+console = Console()
 
 def all():
     """
@@ -182,7 +186,7 @@ def rename_input():
         return False
 
     # Ask user input
-    name = menu.get_input(message='Category name: ')
+    name = menu.get_input(message='Category name')
 
     # Return false if name is missing
     if not name:
@@ -275,14 +279,27 @@ def main_menu():
         print(to_table(all()))
 
         print()
+        table = Table(box=box.ROUNDED)
+        table.add_column("Key")
+        table.add_column("Description")
+
+        menu_list = {
+            "a": "Add a category",
+            "r": "Rename a category",
+            "d": "Delete a category",
+            "b": "Back to vault",
+        }
+
+        for key, description in menu_list.items():
+            table.add_row(key, description)
+
+        console.print(table)
         command = menu.get_input(
-            message='Choose a command [(a)dd a category / (r)rename a category / (d)elete a category / (b)ack to Vault]: ',
+            message='Choose a command',
             lowercase=True,
+            choices=menu_list.keys(),
             non_locking_values=['l', 'q']
         )
-
-        if command is False:
-            print()
 
         # Action based on command
         if command == 'a':  # Add a category

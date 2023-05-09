@@ -4,7 +4,6 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from .base import Base
 from ..modules.carry import global_scope
 
-
 class SecretModel(Base):
     __tablename__ = 'secrets'
 
@@ -19,7 +18,7 @@ class SecretModel(Base):
 
     def __init__(self, name, url='', login='', password='', notes='', category_id=None):
         # Set class level vars
-        self.salt = ''  # Will call the setter and set a salt automatically
+        self.salt = ''
         self.name = name
         self.url = url
         self.login = login
@@ -28,26 +27,31 @@ class SecretModel(Base):
         self.category_id = category_id
 
     def __repr__(self):
-        return "<SecretModel(id='%s', name='%s', login='%s', salt='%s')>" % (
-            self.id, self.name, self.login, self._salt)
+        return f"<SecretModel(id='{self.id}', name='{self.name}', login='{self.login}', salt='{self.salt}')"
 
     def get_enc(self):
-        """ Returns a shared instance of Encryption class """
+        """
+            Returns a shared instance of Encryption class
+        """
 
         if global_scope['enc'] is None:
-            raise RuntimeError('`enc` is not defined in the global scope.')
+            raise RuntimeError("`enc` is not defined in the global scope")
 
         return global_scope['enc']
 
     @hybrid_property
     def salt(self):
-        """ `salt` getter """
+        """
+            `salt` getter
+        """
 
         return self._salt
 
     @salt.setter
     def salt(self, void=''):
-        """ `salt` setter """
+        """
+            `salt` setter
+        """
 
         self._salt = self.get_enc().gen_salt()
 
